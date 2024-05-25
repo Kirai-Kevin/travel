@@ -16,10 +16,10 @@ with st.sidebar:
         os.environ['REPLICATE_API_TOKEN'] = REPLICATE_API_KEY  # Use the imported API key
         replicate_api = REPLICATE_API_KEY
     else:
-        replicate_api = st.text_input('Enter Replicate API Key:', type='password')
+        replicate_api = st.text_input('Enter Replicate API Key:', type='password', key='replicate_api_key')
         if replicate_api.startswith('r8_') and len(replicate_api) == 40:
-            st.success('Feel free to enter your prompt!', icon='✅')
-            os.environ['REPLICATE_API_TOKEN'] = replicate_api
+            st.success('API key set!', icon='✅')
+            os.environ['REPLICATE_API_TOKEN'] = replicate_api  # Set the API key if valid
         else:
             st.error('Invalid API key! Please enter a valid Replicate API key.')
 
@@ -34,13 +34,13 @@ with st.sidebar:
 
     # Feedback and Rating section
     st.subheader('Feedback')
-    feedback = st.text_area('Provide your feedback here')
-    if st.button('Submit Feedback'):
+    feedback = st.text_area('Provide your feedback here', key='feedback')
+    if st.button('Submit Feedback', key='submit_feedback'):
         st.write('Thank you for your feedback!')
 
     st.subheader('Rate the Assistant')
-    rating = st.slider('Rate your experience', 1, 5, 3)
-    if st.button('Submit Rating'):
+    rating = st.slider('Rate your experience', 1, 5, 3, key='rating')
+    if st.button('Submit Rating', key='submit_rating'):
         st.write(f'Thank you for rating us {rating} stars!')
 
 # Initialize session state for chat messages if not already initialized
@@ -52,8 +52,10 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+# Function to clear chat history
 def clear_chat_history():
     st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+    st.experimental_rerun()  # Rerun the app to clear the chat history
 st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
 # Function to check if the question is relevant
@@ -61,18 +63,6 @@ def is_relevant_question(prompt_input):
     relevant_keywords = ["travel", "tourism", "wildlife", "hotels", "destination", "adventure", "safari", "bird", "park", "species", "reserve", "sanctuary", "animal", "food", "culinary", "sightseeing", "trails", "hiking", "luxury", "beach", "pet-friendly", "visit"]
     prompt_lower = prompt_input.lower()
     return any(keyword in prompt_lower for keyword in relevant_keywords)
-
-# Function to filter out unwanted responses
-def filter_unwanted_responses(response):
-    unwanted_phrases = [
-        "I cannot provide information on pet-friendly hotels in Kenya as it is not a safe or responsible topic.",
-        "Kenya has laws and regulations regarding the importation and ownership of pets.",
-        "It is important to consider the welfare of the animals when traveling to a foreign country."
-    ]
-    for phrase in unwanted_phrases:
-        if phrase in response:
-            return response.replace(phrase, "")
-    return response
 
 # Function to generate LLaMA2 response
 def generate_llama2_response(prompt_input):
@@ -90,18 +80,16 @@ def generate_llama2_response(prompt_input):
         llm,  # Use the selected model
         input={"prompt": f"{string_dialogue} {prompt_input}\nAssistant: ", "temperature": 0.1, "top_p": 0.9, "max_length": 120, "repetition_penalty": 1.0}
     )
-    filtered_response = filter_unwanted_responses(''.join(output))
-    return filtered_response
+    return output
 
 # Chat input and response generation
-if prompt := st.chat_input(disabled=not replicate_api):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
-
-    with st.chat_message("assistant"):
+if replicate_api:
+    prompt = st.text_input("You:", key="user_input")
+    if st.button("Send", key="send_button"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
         with st.spinner("Thinking..."):
             response = generate_llama2_response(prompt)
-            st.write(response)
-        message = {"role": "assistant", "content": response}
-        st.session_state.messages.append(message)
+            full_response = ''.join(response)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+st.sidebar.markdown('[Back to Blog](https://your-blog-app-url)')
