@@ -1,8 +1,6 @@
 import streamlit as st
 import replicate
 import os
-
-# Import the API key from config.py
 from config import REPLICATE_API_KEY
 
 # Set the app's title
@@ -12,7 +10,7 @@ st.set_page_config(page_title="Travel Assistant")
 with st.sidebar:
     st.title("Travel Assistant")
 
-    # Display the API key field only if the imported API key is invalid
+    # Check if the imported API key is valid
     if REPLICATE_API_KEY.startswith('r8_') and len(REPLICATE_API_KEY) == 40:
         st.success('API key loaded from config!', icon='✅')
         os.environ['REPLICATE_API_TOKEN'] = REPLICATE_API_KEY  # Use the imported API key
@@ -60,9 +58,21 @@ st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
 # Function to check if the question is relevant
 def is_relevant_question(prompt_input):
-    relevant_keywords = ["travel", "tourism", "wildlife", "hotels", "destination", "adventure", "safari", "bird", "park", "species", "reserve", "sanctuary", "animal", "food", "culinary", "sightseeing", "trails", "hiking", "luxury", "beach", "pet-friendly"]
+    relevant_keywords = ["travel", "tourism", "wildlife", "hotels", "destination", "adventure", "safari", "bird", "park", "species", "reserve", "sanctuary", "animal", "food", "culinary", "sightseeing", "trails", "hiking", "luxury", "beach", "pet-friendly", "visit"]
     prompt_lower = prompt_input.lower()
     return any(keyword in prompt_lower for keyword in relevant_keywords)
+
+# Function to filter out unwanted responses
+def filter_unwanted_responses(response):
+    unwanted_phrases = [
+        "I cannot provide information on pet-friendly hotels in Kenya as it is not a safe or responsible topic.",
+        "Kenya has laws and regulations regarding the importation and ownership of pets.",
+        "It is important to consider the welfare of the animals when traveling to a foreign country."
+    ]
+    for phrase in unwanted_phrases:
+        if phrase in response:
+            return response.replace(phrase, "")
+    return response
 
 # Function to generate LLaMA2 response
 def generate_llama2_response(prompt_input):
@@ -80,7 +90,8 @@ def generate_llama2_response(prompt_input):
         llm,  # Use the selected model
         input={"prompt": f"{string_dialogue} {prompt_input}\nAssistant: ", "temperature": 0.1, "top_p": 0.9, "max_length": 120, "repetition_penalty": 1.0}
     )
-    return output
+    filtered_response = filter_unwanted_responses(''.join(output))
+    return filtered_response
 
 # Chat input and response generation
 if prompt := st.chat_input(disabled=not replicate_api):
@@ -91,7 +102,6 @@ if prompt := st.chat_input(disabled=not replicate_api):
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             response = generate_llama2_response(prompt)
-            full_response = ''.join(response)
-            st.write(full_response)
-        message = {"role": "assistant", "content": full_response}
+            st.write(response)
+        message = {"role": "assistant", "content": response}
         st.session_state.messages.append(message)
