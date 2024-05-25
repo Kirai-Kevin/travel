@@ -1,6 +1,7 @@
 import streamlit as st
 import replicate
 import os
+import webbrowser
 from config import REPLICATE_API_KEY
 
 # Set the app's title
@@ -92,4 +93,7 @@ if replicate_api:
             full_response = ''.join(response)
         st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-st.sidebar.markdown('[Back to Blog](https://your-blog-app-url)')
+def open_blog():
+    webbrowser.open_new_tab("https://www.google.com/index.html")
+
+st.sidebar.button("Back to Blog", on_click=open_blog)
