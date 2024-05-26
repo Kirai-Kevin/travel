@@ -7,41 +7,50 @@ from config import REPLICATE_API_KEY
 # Set the app's title
 st.set_page_config(page_title="Travel Assistant")
 
+# Function to check if the API key is valid
+def is_valid_api_key(api_key):
+    return api_key.startswith('r8_') and len(api_key) == 40
+
+# Function to set API key
+def set_api_key(api_key):
+    if is_valid_api_key(api_key):
+        os.environ['REPLICATE_API_TOKEN'] = api_key
+        st.success('API key set!', icon='✅')
+        return True
+    else:
+        st.error('Invalid API key! Please enter a valid Replicate API key.')
+        return False
+
 # Sidebar setup
 with st.sidebar:
     st.title("Travel Assistant")
-
-    # Check if the imported API key is valid
-    if REPLICATE_API_KEY.startswith('r8_') and len(REPLICATE_API_KEY) == 40:
-        st.success('API key loaded from config!', icon='✅')
-        os.environ['REPLICATE_API_TOKEN'] = REPLICATE_API_KEY  # Use the imported API key
-        replicate_api = REPLICATE_API_KEY
+    
+    use_own_api_key = st.checkbox("Use your own API key")
+    
+    if use_own_api_key:
+        custom_api_key = st.text_input('Enter your Replicate API Key:', type='password', key='custom_replicate_api_key')
+        if custom_api_key:
+            set_api_key(custom_api_key)
     else:
-        replicate_api = st.text_input('Enter Replicate API Key:', type='password', key='replicate_api_key')
-        if replicate_api.startswith('r8_') and len(replicate_api) == 40:
-            st.success('API key set!', icon='✅')
-            os.environ['REPLICATE_API_TOKEN'] = replicate_api  # Set the API key if valid
+        if is_valid_api_key(REPLICATE_API_KEY):
+            os.environ['REPLICATE_API_TOKEN'] = REPLICATE_API_KEY
+            st.success('Default API key loaded from config!', icon='✅')
         else:
-            st.error('Invalid API key! Please enter a valid Replicate API key.')
+            st.warning('Default API key is not valid. Please enter your own API key.')
 
     # Hidden model selection and parameters
     with st.empty():
         st.subheader('Models and Parameters')
         selected_model = st.selectbox('Choose a Llama2 model', ['Llama2-7B', 'Llama2-13B'], key='selected_model')
-        if selected_model == 'Llama2-7B':
-            llm = 'a16z-infra/llama7b-v2-chat:4f0a4744c7295c024a1de15e1a63c880d3da035fa1f49bfd344fe076074c8eea'
-        elif selected_model == 'Llama2-13B':
-            llm = 'a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5'
+        llm = {
+            'Llama2-7B': 'a16z-infra/llama7b-v2-chat:4f0a4744c7295c024a1de15e1a63c880d3da035fa1f49bfd344fe076074c8eea',
+            'Llama2-13B': 'a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5'
+        }.get(selected_model)
 
-    # Feedback and Rating section
-    st.subheader('Feedback')
-    feedback = st.text_area('Provide your feedback here', key='feedback')
-    if st.button('Submit Feedback', key='submit_feedback'):
-        st.write('Thank you for your feedback!')
-
+    # 5-star rating system
     st.subheader('Rate the Assistant')
-    rating = st.slider('Rate your experience', 1, 5, 3, key='rating')
-    if st.button('Submit Rating', key='submit_rating'):
+    rating = st.slider('Rate your experience', 1, 5, 3)
+    if st.button('Submit Rating'):
         st.write(f'Thank you for rating us {rating} stars!')
 
 # Initialize session state for chat messages if not already initialized
@@ -84,18 +93,21 @@ def generate_llama2_response(prompt_input):
     output_response = output[0]["generated_text"] if isinstance(output, list) and len(output) > 0 else ""
     return [output_response]
 
-
 # Chat input and response generation
-if replicate_api:
+if 'REPLICATE_API_TOKEN' in os.environ:
+    replicate_api = os.environ['REPLICATE_API_TOKEN']
     prompt = st.text_input("You:", key="user_input")
     if st.button("Send", key="send_button"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.spinner("Thinking..."):
-            response = generate_llama2_response(prompt)
-            full_response = ''.join(response)
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        if prompt.strip() == "":
+            st.warning("Please enter a question.")
+        else:
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.spinner("Thinking..."):
+                response = generate_llama2_response(prompt)
+                full_response = ''.join(response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 def open_blog():
-    webbrowser.open_new_tab("https://www.google.com/index.html")
+    webbrowser.open_new_tab("https://main--dhub-blog02.netlify.app/")
 
 st.sidebar.button("Back to Blog", on_click=open_blog)
