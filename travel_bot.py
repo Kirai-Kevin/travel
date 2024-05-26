@@ -81,7 +81,9 @@ def generate_llama2_response(prompt_input):
         llm,  # Use the selected model
         input={"prompt": f"{string_dialogue} {prompt_input}\nAssistant: ", "temperature": 0.1, "top_p": 0.9, "max_length": 120, "repetition_penalty": 1.0}
     )
-    return output
+    output_response = output[0]["generated_text"] if isinstance(output, list) and len(output) > 0 else ""
+    return [output_response]
+
 
 # Chat input and response generation
 if replicate_api:
