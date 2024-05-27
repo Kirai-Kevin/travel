@@ -1,11 +1,16 @@
 import streamlit as st
 import replicate
 import os
+from dotenv import load_dotenv
 import webbrowser
-from config import REPLICATE_API_KEY
+# from config import REPLICATE_API_KEY
+
+load_dotenv()
 
 # Set the app's title
 st.set_page_config(page_title="Travel Assistant")
+
+REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY")
 
 # Function to check if the API key is valid
 def is_valid_api_key(api_key):
@@ -70,7 +75,7 @@ st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
 # Function to check if the question is relevant
 def is_relevant_question(prompt_input):
-    relevant_keywords = ["travel", "tourism", "wildlife", "hotels", "destination", "adventure", "safari", "bird", "park", "species", "reserve", "sanctuary", "animal", "food", "culinary", "sightseeing", "trails", "hiking", "luxury", "beach", "pet-friendly", "visit"]
+    relevant_keywords = ["travel", "tourism", "wildlife", "hotels", "destination", "adventure", "safari", "bird", "park", "species", "reserve", "sanctuary", "animal", "food", "culinary", "sightseeing", "trails", "hiking", "luxury", "beach", "pet-friendly", "visit", "resort"]
     prompt_lower = prompt_input.lower()
     return any(keyword in prompt_lower for keyword in relevant_keywords)
 
@@ -90,8 +95,9 @@ def generate_llama2_response(prompt_input):
         llm,  # Use the selected model
         input={"prompt": f"{string_dialogue} {prompt_input}\nAssistant: ", "temperature": 0.1, "top_p": 0.9, "max_length": 120, "repetition_penalty": 1.0}
     )
-    output_response = output[0]["generated_text"] if isinstance(output, list) and len(output) > 0 else ""
-    return [output_response]
+    return output
+    #output_response = output[0]["generated_text"] if isinstance(output, list) and len(output) > 0 else ""
+    #return [output_response]
 
 # Chat input and response generation
 if 'REPLICATE_API_TOKEN' in os.environ:
